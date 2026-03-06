@@ -20,10 +20,10 @@ export class Line implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Consume Line API',
+		hidden: true,
 		defaults: {
 			name: 'Line',
 		},
-		usableAsTool: true,
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
 		credentials: [
@@ -40,8 +40,8 @@ export class Line implements INodeType {
 		properties: [
 			{
 				displayName:
-					'End of service: LINE Notify will be discontinued from April 1st 2025, You can find more information <a href="https://notify-bot.line.me/closing-announce" target="_blank">here</a>',
-				name: 'notice',
+					'Line Notify API has been shut down as of March 31, 2025 and this node will no longer function. See the <a href="https://notify-bot.line.me/closing-announce" target="_blank">official shutdown announcement</a>.',
+				name: 'deprecated',
 				type: 'notice',
 				default: '',
 			},
@@ -138,7 +138,7 @@ export class Line implements INodeType {
 			} catch (error) {
 				if (this.continueOnFail()) {
 					const executionErrorData = this.helpers.constructExecutionMetaData(
-						this.helpers.returnJsonArray({ error: error.message }),
+						this.helpers.returnJsonArray({ error: (error as Error).message }),
 						{ itemData: { item: i } },
 					);
 					returnData.push(...executionErrorData);
