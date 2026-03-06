@@ -118,10 +118,26 @@ export interface WorkflowDetailsResult {
 
 /** Response from execute_workflow tool */
 export interface ExecuteWorkflowResult {
-	success: boolean;
 	executionId: string | null;
-	result?: unknown;
-	error?: unknown;
+	status: 'success' | 'error' | 'running' | 'waiting' | 'canceled' | 'crashed' | 'new' | 'unknown';
+	error?: string;
+}
+
+/** Response from get_execution tool */
+export interface GetExecutionResult {
+	execution: {
+		id: string;
+		workflowId: string;
+		mode: string;
+		status: string;
+		startedAt: string | null;
+		stoppedAt: string | null;
+		retryOf?: string | null;
+		retrySuccessId?: string | null;
+		waitTill?: string | null;
+	} | null;
+	data?: unknown;
+	error?: string;
 }
 
 /**
@@ -731,6 +747,46 @@ export class McpApiHelper {
 	}
 
 	/**
+	 * Calls an internal MCP tool and parses the JSON response.
+	 * Handles both SSE and JSON response formats.
+	 */
+	private async callInternalMcpTool<T>(
+		apiKey: string,
+		toolName: string,
+		args: Record<string, unknown>,
+	): Promise<T> {
+		const message = this.createMessage('tools/call', { name: toolName, arguments: args });
+		const response = await this.internalMcpSendMessage(apiKey, message);
+		const contentType = response.headers()['content-type'] ?? '';
+		const body = await response.text();
+
+		const result = contentType.includes('text/event-stream')
+			? this.parseSSEToolResponse(body)
+			: this.parseJsonToolResponse(body);
+
+		if (result?.isError) {
+			throw new Error(result.content?.[0]?.text ?? JSON.stringify(result));
+		}
+
+		const text = result?.content?.[0]?.text;
+		if (!text) {
+			throw new Error(
+				`Unexpected response format from ${toolName}: ${JSON.stringify(result ?? body)}`,
+			);
+		}
+
+		return JSON.parse(text) as T;
+	}
+
+	private parseJsonToolResponse(body: string): McpToolCallResponse {
+		const parsed = JSON.parse(body) as { result?: McpToolCallResponse; error?: unknown };
+		if (parsed.error) {
+			throw new Error(`MCP Error: ${JSON.stringify(parsed.error)}`);
+		}
+		return parsed.result as McpToolCallResponse;
+	}
+
+	/**
 	 * Triggers an HTTP request to the MCP endpoint with retry logic for 404s.
 	 * Based on WebhookApiHelper.trigger().
 	 */
@@ -928,50 +984,39 @@ export class McpApiHelper {
 		if (inputs) {
 			args.inputs = inputs;
 		}
-		const message = this.createMessage('tools/call', {
-			name: 'execute_workflow',
-			arguments: args,
-		});
-		const response = await this.internalMcpSendMessage(apiKey, message);
-		const contentType = response.headers()['content-type'] ?? '';
-		const body = await response.text();
-
-		// Parse the response (handles both SSE and JSON)
-		let result: McpToolCallResponse;
-		if (contentType.includes('text/event-stream')) {
-			result = this.parseSSEToolResponse(body);
-		} else {
-			const parsed = JSON.parse(body) as { result?: McpToolCallResponse; error?: unknown };
-			if (parsed.error) {
-				throw new Error(`MCP Error: ${JSON.stringify(parsed.error)}`);
-			}
-			result = parsed.result as McpToolCallResponse;
-		}
-
-		if (result?.content?.[0]?.text) {
-			const text = result.content[0].text;
-			try {
-				return JSON.parse(text) as ExecuteWorkflowResult;
-			} catch {
-				if (result.isError) {
-					return {
-						success: false,
-						executionId: null,
-						error: text,
-					};
-				}
-				throw new Error(`Invalid JSON response from execute_workflow: ${text}`);
-			}
-		}
-		if (result?.isError) {
+		try {
+			return await this.callInternalMcpTool<ExecuteWorkflowResult>(
+				apiKey,
+				'execute_workflow',
+				args,
+			);
+		} catch (error) {
 			return {
-				success: false,
 				executionId: null,
-				error: JSON.stringify(result),
+				status: 'error',
+				error: error instanceof Error ? error.message : String(error),
 			};
 		}
-		throw new Error(
-			`Unexpected response format from execute_workflow: ${JSON.stringify(result ?? body)}`,
-		);
+	}
+
+	/**
+	 * Calls get_execution tool on the internal MCP service.
+	 */
+	async internalMcpGetExecution(
+		apiKey: string,
+		workflowId: string,
+		executionId: string,
+	): Promise<GetExecutionResult> {
+		try {
+			return await this.callInternalMcpTool<GetExecutionResult>(apiKey, 'get_execution', {
+				workflowId,
+				executionId,
+			});
+		} catch (error) {
+			return {
+				execution: null,
+				error: error instanceof Error ? error.message : String(error),
+			};
+		}
 	}
 }
