@@ -66,6 +66,7 @@ import { TcrExecutor, formatTcrResultConsole, formatTcrResultJSON } from './core
 import { TestDiscoveryAnalyzer } from './core/test-discovery-analyzer.js';
 import { createDefaultRunner } from './index.js';
 import type { RunOptions } from './types.js';
+import { resolveInputPaths } from './utils/paths.js';
 
 async function loadConfig(configPath?: string): Promise<JanitorConfig> {
 	const cwd = process.cwd();
@@ -169,6 +170,9 @@ async function runImpact(options: CliOptions): Promise<void> {
 			scopeDir: config.rootDir,
 			extensions: ['.ts'],
 		});
+	} else {
+		const { getGitRoot } = await import('./utils/git-operations.js');
+		changedFiles = resolveInputPaths(changedFiles, getGitRoot(config.rootDir));
 	}
 
 	if (changedFiles.length === 0) {
@@ -442,6 +446,9 @@ async function runOrchestrate(options: CliOptions): Promise<void> {
 				extensions: ['.ts'],
 				targetBranch: options.baseRef,
 			});
+		} else {
+			const { getGitRoot } = await import('./utils/git-operations.js');
+			changedFiles = resolveInputPaths(changedFiles, getGitRoot(config.rootDir));
 		}
 
 		if (changedFiles.length === 0) {
