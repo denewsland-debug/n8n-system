@@ -1,5 +1,6 @@
 import type { NodeTypes } from '@/node-types';
 import { mockInstance } from '@n8n/backend-test-utils';
+import type { LicenseState } from '@n8n/backend-common';
 import type { GlobalConfig } from '@n8n/config';
 import {
 	type CredentialsEntity,
@@ -33,8 +34,11 @@ import type { Telemetry } from '@/telemetry';
 const flushPromises = async () => await new Promise((resolve) => setImmediate(resolve));
 
 describe('TelemetryEventRelay', () => {
-	const telemetry = mock<Telemetry>();
+	const telemetry = mock<Telemetry>({
+		sanitizeTelemetryProperties: jest.fn((data) => data),
+	});
 	const license = mock<License>();
+	const licenseState = mock<LicenseState>();
 	const globalConfig = mock<GlobalConfig>({
 		deployment: {
 			type: 'default',
@@ -67,6 +71,35 @@ describe('TelemetryEventRelay', () => {
 			optimizingTimeWindowHours: 400,
 			trimmingTimeWindowDays: 600,
 		},
+		host: 'localhost',
+		generic: {
+			timezone: 'UTC',
+			releaseChannel: 'stable',
+		},
+		defaultLocale: 'en',
+		personalization: {
+			enabled: true,
+		},
+		multiMainSetup: {
+			enabled: false,
+		},
+		taskRunners: {
+			mode: 'external',
+		},
+		templates: {
+			enabled: true,
+		},
+		ai: {
+			enabled: false,
+		},
+		license: {
+			tenantId: 1,
+			autoRenewalEnabled: false,
+			activationKey: '',
+		},
+		database: {
+			type: 'sqlite',
+		},
 	});
 	const binaryDataConfig = mock<BinaryDataConfig>({
 		mode: 'default',
@@ -87,6 +120,7 @@ describe('TelemetryEventRelay', () => {
 			eventService,
 			telemetry,
 			license,
+			licenseState,
 			globalConfig,
 			instanceSettings,
 			binaryDataConfig,
@@ -112,6 +146,7 @@ describe('TelemetryEventRelay', () => {
 				eventService,
 				telemetry,
 				license,
+				licenseState,
 				globalConfig,
 				instanceSettings,
 				binaryDataConfig,
@@ -136,6 +171,7 @@ describe('TelemetryEventRelay', () => {
 				eventService,
 				telemetry,
 				license,
+				licenseState,
 				globalConfig,
 				instanceSettings,
 				binaryDataConfig,
@@ -1266,6 +1302,13 @@ describe('TelemetryEventRelay', () => {
 
 			eventService.emit('user-updated', event);
 
+			expect(telemetry.identify).toHaveBeenCalledWith(
+				{
+					user_role: GLOBAL_OWNER_ROLE.slug,
+					user_email: 'user@example.com',
+				},
+				'user123',
+			);
 			expect(telemetry.track).toHaveBeenCalledWith('User changed personal settings', {
 				user_id: 'user123',
 				fields_changed: ['firstName', 'lastName'],
@@ -1298,6 +1341,12 @@ describe('TelemetryEventRelay', () => {
 				target_user_id: 'user456',
 				migration_user_id: 'user789',
 			});
+			expect(telemetry.identify).toHaveBeenCalledWith(
+				{
+					deleted: true,
+				},
+				'user456',
+			);
 		});
 
 		it('should track on `user-invited` event', () => {
@@ -1341,6 +1390,17 @@ describe('TelemetryEventRelay', () => {
 
 			eventService.emit('user-signed-up', event);
 
+			expect(telemetry.identify).toHaveBeenCalledWith(
+				{
+					user_id: 'user123',
+					user_type: 'email',
+					was_disabled_ldap_user: false,
+				},
+				'user123',
+			);
+			expect(telemetry.groupIdentify).toHaveBeenCalledWith({
+				userId: 'user123',
+			});
 			expect(telemetry.track).toHaveBeenCalledWith('User signed up', {
 				user_id: 'user123',
 				user_type: 'email',
@@ -1380,6 +1440,12 @@ describe('TelemetryEventRelay', () => {
 
 			eventService.emit('user-changed-role', event);
 
+			expect(telemetry.identify).toHaveBeenCalledWith(
+				{
+					user_role: 'global:member',
+				},
+				'user456',
+			);
 			expect(telemetry.track).toHaveBeenCalledWith('User changed role', {
 				user_id: 'user123',
 				target_user_id: 'user456',
@@ -1426,6 +1492,15 @@ describe('TelemetryEventRelay', () => {
 
 			await flushPromises();
 
+			expect(telemetry.groupIdentify).toHaveBeenCalledWith(
+				expect.objectContaining({
+					traits: expect.objectContaining({
+						n8n_host: expect.any(String),
+						version_cli: N8N_VERSION,
+						n8n_deployment_type: 'default',
+					}),
+				}),
+			);
 			expect(telemetry.identify).toHaveBeenCalledWith(
 				expect.objectContaining({
 					version_cli: N8N_VERSION,
@@ -1497,6 +1572,9 @@ describe('TelemetryEventRelay', () => {
 
 			eventService.emit('instance-owner-setup', event);
 
+			expect(telemetry.groupIdentify).toHaveBeenCalledWith({
+				userId: 'user123',
+			});
 			expect(telemetry.track).toHaveBeenCalledWith('Owner finished instance setup', {
 				user_id: 'user123',
 			});
