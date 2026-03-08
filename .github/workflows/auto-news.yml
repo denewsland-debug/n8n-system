@@ -1,19 +1,26 @@
 name: Auto News
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: "0 */2 * * *"
+    - cron: '0 */2 * * *'
 
 jobs:
-  run:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
       - name: Setup Python
         uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-      - run: pip install feedparser requests python-wordpress-xmlrpc
+      - name: Install libraries
+        run: |
+          pip install requests feedparser
 
-      - run: python script.py
+      - name: Run script
+        run: python script.py
