@@ -20,7 +20,10 @@ jobs:
 
       - name: Install libraries
         run: |
-          pip install requests feedparser
+          pip install requests
+           pip install requests feedparser
+           pip install python-wordpress-xmlrpc
+          
 
       - name: Run script
         run: python script.py
