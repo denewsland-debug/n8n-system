@@ -15,8 +15,7 @@ from wordpress_xmlrpc.methods.media import UploadFile
 wp = Client(
 "https://denewsland.in/xmlrpc.php",
 "sumitsajwan8954@gmail.co",
-"dv9a 3oA6 INKM fxC4 PVr2 D9K5
-"
+"dv9a 3oA6 INKM fxC4 PVr2 D9K5"
 )
 
 # ==============================
