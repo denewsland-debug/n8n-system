@@ -1,3 +1,4 @@
+import os
 import feedparser
 from wordpress_xmlrpc import Client, WordPressPost
 from wordpress_xmlrpc.methods.posts import NewPost
