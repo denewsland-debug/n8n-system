@@ -10,8 +10,8 @@ rss_urls = [
 
 wp = Client(
 "https://denewsland.in/xmlrpc.php",
-"YOUR_USERNAME",
-"APPLICATION_PASSWORD"
+"sumitsajwan8954@gmail.co",
+"dv9a 3oA6 INKM fxC4 PVr2 D9K5"
 )
 
 for url in rss_urls:
