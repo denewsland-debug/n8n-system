@@ -228,3 +228,28 @@ for url in rss_urls:
         post.terms_names = {'category':[category]}
 
         wp.call(NewPost(post))
+				# ===== POST URL =====
+
+url = f"https://denewsland.in/?p={post_id}"
+
+# ===== GOOGLE SITEMAP PING =====
+
+requests.get(
+"https://www.google.com/ping?sitemap=https://denewsland.in/sitemap_index.xml"
+)
+
+# ===== BING INDEXNOW =====
+
+indexnow_url = "https://api.indexnow.org/indexnow"
+
+payload = {
+"host": "denewsland.in",
+"key": "Denewsland8954275500",
+"urlList": [url]
+}
+
+requests.post(indexnow_url, json=payload)
+
+# ===== DISCOVER REFRESH SIGNAL =====
+
+requests.get(url)
