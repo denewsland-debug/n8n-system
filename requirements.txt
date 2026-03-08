@@ -1,0 +1,2 @@
+feedparser
+python-wordpress-xmlrpc
