@@ -1,0 +1,27 @@
+name: Denewsland Auto News
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install libs
+        run: |
+          pip install requests feedparser python-wordpress-xmlrpc
+
+      - name: Run script
+        run: |
+          python script.py
