@@ -4,6 +4,8 @@ import hashlib
 import os
 import random
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 SITE = "https://denewsland.in"
 USERNAME = "sumitsajwan8954@gmail.co"
 APP_PASSWORD = "dv9a 3oA6 INKM fxC4 PVr2 D9K5"
