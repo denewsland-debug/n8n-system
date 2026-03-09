@@ -4,16 +4,14 @@ import random
 import os
 import re
 import hashlib
-from wordpress_xmlrpc import Client, WordPressPost
-from wordpress_xmlrpc.methods.posts import NewPost
-from wordpress_xmlrpc.methods.media import UploadFile
+
 
 # ==============================
 # WORDPRESS LOGIN
 # ==============================
 
 wp = Client(
-"https://denewsland.in/xmlrpc.php",
+site = "https://denewsland.in",
 "sumitsajwan8954@gmail.co",
 "dv9a 3oA6 INKM fxC4 PVr2 D9K5"
 )
