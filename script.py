@@ -1,4 +1,4 @@
-import requests
+uimport requests
 import feedparser
 import hashlib
 import os
@@ -63,7 +63,7 @@ Rules:
 Language simple Hindi
 Title Hindi + English mix
 Discover friendly
-Human readable
+Human Hindi Language readable
 """
 
     data = {
@@ -80,8 +80,8 @@ Human readable
     if "choices" in result:
         return result["choices"][0]["message"]["content"]
     else:
-        print("AI error:", result)
-        return topic
+    print("AI error:", result)
+    return "AI rewrite failed. Topic: " + topic
 
 
 # ---------- image generator ----------
