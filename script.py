@@ -222,6 +222,6 @@ for feed in RSS_FEEDS:
 
         title = article.split("\n")[0]
 
-        image_id = get_image()
+        image_id = get_image(title)
 
         publish(title,article,image_id)
