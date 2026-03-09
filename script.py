@@ -1,63 +1,46 @@
 import feedparser
 import requests
-import random
 import os
-import re
-import hashlib
-
+import random
 
 # ==============================
-# WORDPRESS LOGIN
+# WORDPRESS LOGIN (REST API)
 # ==============================
 
-wp = Client(
-site = "https://denewsland.in",
-"sumitsajwan8954@gmail.co",
-"dv9a 3oA6 INKM fxC4 PVr2 D9K5"
-)
+site = "https://denewsland.in"
+username = "sumitsajwan8954@gmail.co"
+app_password = "dv9a 3oA6 INKM fxC4 PVr2 D9K5"
 
 # ==============================
-# GROQ API
+# GROQ AI
 # ==============================
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # ==============================
-# RSS SOURCES (Mint + News)
+# RSS SOURCES
 # ==============================
 
 rss_urls = [
 "https://news.google.com/rss/search?q=india+finance",
 "https://news.google.com/rss/search?q=stock+market+india",
 "https://news.google.com/rss/search?q=technology+news+india",
-"https://news.google.com/rss/search?q=breaking+news+india",
 "https://www.livemint.com/rss/markets",
 "https://www.livemint.com/rss/technology",
 "https://www.livemint.com/rss/news"
 ]
 
 # ==============================
-# DUPLICATE CHECK
+# INTERNAL LINKS
 # ==============================
 
-def is_duplicate(text):
-
-    hash_val = hashlib.md5(text.encode()).hexdigest()
-
-    try:
-        with open("hashes.txt","r") as f:
-            hashes = f.read()
-
-            if hash_val in hashes:
-                return True
-
-    except:
-        pass
-
-    with open("hashes.txt","a") as f:
-        f.write(hash_val+"\n")
-
-    return False
+internal_links = [
+"https://denewsland.in/category/finance-news/",
+"https://denewsland.in/category/market-news/",
+"https://denewsland.in/category/tech-news/",
+"https://denewsland.in/category/breaking-updates/",
+"https://denewsland.in/"
+]
 
 # ==============================
 # AI REWRITE
@@ -66,187 +49,106 @@ def is_duplicate(text):
 def ai_rewrite(text):
 
     prompt = f"""
-पूर्ण हिंदी लेख तैयार करो मानव भाषा वाला।
+    इस news को simple human Hindi में rewrite करो।
+    Article informative होना चाहिए।
+    Title strong होना चाहिए।
+    Article Discover friendly होना चाहिए।
 
-Article tyar karo or dhyan rhe ye article or title pichle kisi se match na ho।
+    Topic:
+    {text}
+    """
 
-Information angle se tyar karna।
+    url = "https://api.groq.com/openai/v1/chat/completions"
 
-Topic:
-{text}
-
-Rules:
-
-Language simple Hindi ho
-Title shock + money angle + emoji
-Exactly 3 headings
-5 internal links add karo
-3 authority external links add karo
-600+ words
-"""
-
-    response = requests.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type":"application/json"
-        },
-        json={
-            "model":"llama3-70b-8192",
-            "messages":[{"role":"user","content":prompt}]
-        }
-    )
-
-    data = response.json()
-
-    return data["choices"][0]["message"]["content"]
-
-# ==============================
-# TITLE EXTRACT
-# ==============================
-
-def extract_title(article):
-
-    m = re.search(r"Title:\s*(.*)",article)
-
-    if m:
-        return m.group(1)
-
-    return "Market Update"
-
-# ==============================
-# CTR TITLE OPTIMIZER
-# ==============================
-
-def optimize_title(title):
-
-    return f"🚨 {title} – Investors Alert!"
-
-# ==============================
-# CATEGORY DETECT
-# ==============================
-
-def detect_category(title):
-
-    t = title.lower()
-
-    if "tech" in t:
-        return "Tech News"
-
-    if "stock" in t or "market" in t:
-        return "Market News"
-
-    if "breaking" in t:
-        return "Breaking Updates"
-
-    return "Finance News"
-
-# ==============================
-# DISCOVER THUMBNAIL
-# ==============================
-
-def discover_thumbnail(title):
-
-    words = title.split()
-
-    text = "+".join(words[:3])
-
-    return f"https://dummyimage.com/1280x720/ffffff/0a7f3f.png&text={text}"
-
-# ==============================
-# IMAGE UPLOAD
-# ==============================
-
-def upload_image(url):
-
-    img = requests.get(url).content
-
-    data = {
-        'name':'thumb.jpg',
-        'type':'image/jpeg',
-        'bits':img
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
     }
 
-    res = wp.call(UploadFile(data))
+    data = {
+        "model": "llama3-70b-8192",
+        "messages": [
+            {"role":"user","content":prompt}
+        ]
+    }
 
-    return res['id']
+    r = requests.post(url,headers=headers,json=data)
 
-# ==============================
-# SCHEMA MARKUP
-# ==============================
+    result = r.json()
 
-def add_schema(article,title):
-
-    schema = f"""
-<script type="application/ld+json">
-{{
- "@context":"https://schema.org",
- "@type":"NewsArticle",
- "headline":"{title}"
-}}
-</script>
-"""
-
-    return article + schema
+    return result["choices"][0]["message"]["content"]
 
 # ==============================
-# MAIN LOOP
+# FEATURED IMAGE
 # ==============================
 
-for url in rss_urls:
+def upload_image():
 
-    feed = feedparser.parse(url)
+    img_url = "https://source.unsplash.com/featured/?news"
 
-    for entry in feed.entries[:3]:
+    img = requests.get(img_url).content
 
-        if is_duplicate(entry.summary):
-            continue
+    media_url = f"{site}/wp-json/wp/v2/media"
 
-        article = ai_rewrite(entry.summary)
+    headers = {
+        "Content-Disposition": "attachment; filename=news.jpg"
+    }
 
-        title = extract_title(article)
+    r = requests.post(
+        media_url,
+        headers=headers,
+        data=img,
+        auth=(username,app_password)
+    )
 
-        title = optimize_title(title)
+    return r.json()["id"]
 
-        category = detect_category(title)
+# ==============================
+# POST PUBLISH
+# ==============================
 
-        article = add_schema(article,title)
+def publish_post(title,content,image_id):
 
-        img_url = discover_thumbnail(title)
+    url = f"{site}/wp-json/wp/v2/posts"
 
-        img_id = upload_image(img_url)
+    data = {
+        "title":title,
+        "content":content,
+        "status":"publish",
+        "featured_media":image_id
+    }
 
-        post = WordPressPost()
+    r = requests.post(
+        url,
+        auth=(username,app_password),
+        json=data
+    )
 
-        post.title = title
-        post.content = article
-        post.thumbnail = img_id
-        post.post_status = "publish"
-        post.terms_names = {'category':[category]}
+    print(r.status_code)
 
-        wp.call(NewPost(post))
-				# ===== POST URL =====
+# ==============================
+# MAIN ENGINE
+# ==============================
 
-url = f"https://denewsland.in/?p={post_id}"
+for rss in rss_urls:
 
-# ===== GOOGLE SITEMAP PING =====
+    feed = feedparser.parse(rss)
 
-requests.get(
-"https://www.google.com/ping?sitemap=https://denewsland.in/sitemap_index.xml"
-)
+    for post in feed.entries[:5]:
 
-# ===== BING INDEXNOW =====
+        text = post.title + " " + post.summary
 
-indexnow_url = "https://api.indexnow.org/indexnow"
+        article = ai_rewrite(text)
 
-payload = {
-"host": "denewsland.in",
-"key": "Denewsland8954275500",
-"urlList": [url]
-}
+        title = article.split("\n")[0]
 
-requests.post(indexnow_url, json=payload)
+        image_id = upload_image()
 
-# ===== DISCOVER REFRESH SIGNAL =====
+        content = article
 
-requests.get(url)
+        content += "\n\nExternal Source: " + post.link
+
+        for link in random.sample(internal_links,3):
+            content += "\n" + link
+
+        publish_post(title,content,image_id)
