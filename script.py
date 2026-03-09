@@ -114,7 +114,7 @@ Article
     if "choices" in result:
         return result["choices"][0]["message"]["content"]
 
-    return topic
+    return "AI rewrite failed. " + topic
 
 
 # ---------- IMAGE GENERATOR ----------
@@ -213,7 +213,7 @@ for feed in RSS_FEEDS:
 
     for item in news.entries[:5]:
 
-        topic = item.title
+        topic = item.title + " " + item.summary
 
         if is_duplicate(topic):
             continue
