@@ -51,23 +51,37 @@ Topic: {topic}
 Title, Meta description और 3 headings बनाओ।
 """
 
-    url = "https://api.openai.com/v1/chat/completions"
+    url = "https://api.groq.com/openai/v1/chat/completions"
 
     headers = {
-        "Authorization": f"Bearer {AI_KEY}",
+        "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
 
     data = {
-        "model": "gpt-4o-mini",
-        "messages":[{"role":"user","content":prompt}]
+        "model": "llama3-70b-8192",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
     }
 
-    r = requests.post(url,headers=headers,json=data)
+    r = requests.post(url, headers=headers, json=data)
 
-    result = r.json()
+    try:
 
-    return result["choices"][0]["message"]["content"]
+        result = r.json()
+
+        if "choices" in result:
+            return result["choices"][0]["message"]["content"]
+
+        else:
+            print("AI API error:", result)
+            return topic
+
+    except Exception as e:
+
+        print("AI failure:", e)
+        return topic
 
 
 # ---------- image generator ----------
