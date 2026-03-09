@@ -119,9 +119,37 @@ Article
 
 # ---------- IMAGE GENERATOR ----------
 
-def get_image():
+def get_image(title):
 
-    img_url = "https://picsum.photos/1280/720"
+    # ---- Image prompt ----
+
+    image_prompt = f"""
+Create Google Discover friendly news thumbnail.
+
+Rules:
+
+White + light green background
+
+Single object or logo related to topic
+
+Topic: {title}
+
+Add bold text only 3 words.
+
+Clean minimal design.
+
+No dark colors.
+
+Size 1280x720.
+
+Professional news style.
+"""
+
+    # ---- generate image ----
+
+    url = "https://image.pollinations.ai/prompt/"
+
+    img_url = url + image_prompt.replace(" ","%20")
 
     img = requests.get(img_url).content
 
