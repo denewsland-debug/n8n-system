@@ -6,9 +6,7 @@ import random
 
 SITE = "https://denewsland.in"
 USERNAME = "sumitsajwan8954@gmail.co"
-APP_PASSWORD = "dv9a 3oA6 INKM fxC4 PVr2 D9K5
-
-"
+APP_PASSWORD = "dv9a 3oA6 INKM fxC4 PVr2 D9K5"
 AI_KEY = os.getenv("AI_API_KEY")
 
 RSS_FEEDS = [
