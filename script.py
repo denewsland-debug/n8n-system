@@ -3,8 +3,7 @@ import feedparser
 import hashlib
 import os
 import random
-
-# CONFIG
+import time
 
 SITE = "https://denewsland.in"
 USERNAME = "sumitsajwan8954@gmail.co"
@@ -21,11 +20,14 @@ RSS_FEEDS = [
 INTERNAL_LINKS = [
 "https://denewsland.in/category/finance-news/",
 "https://denewsland.in/category/market-news/",
-"https://denewsland.in/category/tech-news/",
-"https://denewsland.in/category/breaking-updates/"
+"https://denewsland.in/category/tech-news/"
 ]
 
-# DUPLICATE CHECK
+EXTERNAL_LINKS = [
+"https://www.nseindia.com",
+"https://www.bseindia.com"
+]
+
 
 def is_duplicate(text):
 
@@ -43,7 +45,6 @@ def is_duplicate(text):
 
     return False
 
-# AI ARTICLE
 
 def generate_article(topic):
 
@@ -55,42 +56,41 @@ def generate_article(topic):
     }
 
     prompt = f"""
-पूर्ण हिंदी लेख त्यार करो मानव भाषा वाला
+पूर्ण हिंदी लेख लिखो।
 
-Article tyar karo or dhyan rhe ye article or title pichle kisi se match na ho
-
-Topic:
-{topic}
+Topic: {topic}
 
 Rules:
-
-Language simple Hindi
+Simple Hindi language
 Title Hindi English mix
+500-600 words
 Discover friendly
-Human readable
-600 words article
 """
 
     data = {
         "model":"llama3-70b-8192",
-        "messages":[{"role":"user","content":prompt}]
+        "messages":[{"role":"user","content":prompt}],
+        "temperature":0.7
     }
 
-    r = requests.post(url,headers=headers,json=data)
-
-    result = r.json()
-
     try:
+
+        r = requests.post(url,headers=headers,json=data,timeout=30)
+
+        result = r.json()
+
+        if "choices" not in result:
+            return None
+
         return result["choices"][0]["message"]["content"]
+
     except:
         return None
 
 
-# IMAGE GENERATOR
-
 def get_image():
 
-    img_url = "https://picsum.photos/1280/720"
+    img_url = "https://source.unsplash.com/1280x720/?news"
 
     img = requests.get(img_url).content
 
@@ -114,36 +114,35 @@ def get_image():
         return 0
 
 
-# CATEGORY AUTO
+def build_links():
 
-def detect_category(text):
+    internal = random.sample(INTERNAL_LINKS,2)
+    external = random.sample(EXTERNAL_LINKS,1)
 
-    text = text.lower()
+    html = "<h3>Related</h3>"
 
-    if "stock" in text or "market" in text:
-        return 6
+    for i in internal:
+        html += f"<p><a href='{i}'>{i}</a></p>"
 
-    if "technology" in text or "ai" in text:
-        return 10
+    html += "<h3>Sources</h3>"
 
-    if "finance" in text or "bank" in text:
-        return 5
+    for e in external:
+        html += f"<p><a href='{e}'>{e}</a></p>"
 
-    return 3
+    return html
 
 
-# PUBLISH POST
-
-def publish(title,content,image_id,category):
+def publish(title,content,image_id):
 
     url = f"{SITE}/wp-json/wp/v2/posts"
+
+    content += build_links()
 
     data = {
         "title":title,
         "content":content,
         "status":"publish",
-        "featured_media":image_id,
-        "categories":[category]
+        "featured_media":image_id
     }
 
     r = requests.post(
@@ -154,8 +153,6 @@ def publish(title,content,image_id,category):
 
     print("POST:",r.status_code)
 
-
-# MAIN ENGINE
 
 for feed in RSS_FEEDS:
 
@@ -170,13 +167,14 @@ for feed in RSS_FEEDS:
 
         article = generate_article(topic)
 
-        if not article:
+        if article is None:
+            print("AI fail skip")
             continue
 
         title = article.split("\n")[0]
 
         image_id = get_image()
 
-        category = detect_category(topic)
+        publish(title,article,image_id)
 
-        publish(title,article,image_id,category)
+        time.sleep(5)
