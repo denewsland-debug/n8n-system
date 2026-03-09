@@ -51,6 +51,7 @@ def is_duplicate(text):
 
 # ---------- AI ARTICLE GENERATOR ----------
 
+
 def generate_article(topic):
 
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -61,61 +62,39 @@ def generate_article(topic):
     }
 
     prompt = f"""
-पूर्ण हिंदी लेख त्यार करो मानव भाषा वाला
+पूर्ण हिंदी लेख त्यार करो मानव भाषा वाला।
 
-Article tyar karo or dhyan rhe ye article or title pichle kisi se match na ho halka sa bi nahi
-
-Information angle se tyar karna
+Article tyar karo or dhyan rhe ye article or title pichle kisi se match na ho.
 
 Topic:
 {topic}
 
-Strict Rules:
-
-Language bilkul simple Hindi ho
-
-Title shock + money angle + urgency + Hindi + English mix
-
-Article me exactly 3 headings ho
-
-Har heading ke niche paragraph format ho
-
-Discover ke liye strong opening hook likho
-
-Investors ko real impact samjhao
-
-Indian retail investor mindset dhyan me rakho
-
-Informative 
-
-Article 600 words ke aas paas ho
-
-Output format:
-
-Title
-Disclaimer 
-3 external link add article ke under 
-5 internal link add article ke under
-Focus keywords
-Permalink
-Category
-Article
+Rules:
+Language simple Hindi
+Title Hindi + English mix
+Discover friendly
+Human readable
+Article 500+ words
 """
 
     data = {
-        "model":"mixtral-8x7b-32768",
-        "messages":[{"role":"user","content":prompt}]
+        "model": "mixtral-8x7b-32768",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.7
     }
 
-    r = requests.post(url,headers=headers,json=data)
+    r = requests.post(url, headers=headers, json=data)
 
     result = r.json()
 
-    if "choices" in result:
+    print(result)   # debug
+
+    try:
         return result["choices"][0]["message"]["content"]
-
-    return "AI rewrite failed. " + topic
-
+    except:
+        return "AI rewrite failed: " + topic
 
 # ---------- IMAGE GENERATOR ----------
 
