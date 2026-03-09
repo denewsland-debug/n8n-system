@@ -164,7 +164,7 @@ for feed in RSS_FEEDS:
 
     news = feedparser.parse(feed)
 
-    for item in news.entries[:3]:
+    for item in news.entries[:1]:
 
         topic = item.title
 
