@@ -45,14 +45,16 @@ internal_links = [
 # ==============================
 # AI REWRITE
 # ==============================
-
 def ai_rewrite(text):
 
     prompt = f"""
     इस news को simple human Hindi में rewrite करो।
-    Article informative होना चाहिए।
     Title strong होना चाहिए।
-    Article Discover friendly होना चाहिए।
+		Human Language 
+		Title Discover Friendly 
+		3 external link 
+		4 internal link 
+    Article readable होना चाहिए।
 
     Topic:
     {text}
@@ -74,9 +76,13 @@ def ai_rewrite(text):
 
     r = requests.post(url,headers=headers,json=data)
 
-    result = r.json()
+    try:
+        result = r.json()
+        return result["choices"][0]["message"]["content"]
 
-    return result["choices"][0]["message"]["content"]
+    except:
+        print("AI Error:", r.text)
+        return text
 
 # ==============================
 # FEATURED IMAGE
