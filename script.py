@@ -1,121 +1,109 @@
-import feedparser
 import requests
+import feedparser
+import hashlib
 import os
 import random
 
-# ==============================
-# WORDPRESS LOGIN (REST API)
-# ==============================
+SITE = "https://denewsland.in"
+USERNAME = "sumitsajwan8954@gmail.co"
+APP_PASSWORD = "dv9a 3oA6 INKM fxC4 PVr2 D9K5
 
-site = "https://denewsland.in"
-username = "sumitsajwan8954@gmail.co"
-app_password = "dv9a 3oA6 INKM fxC4 PVr2 D9K5"
+"
+AI_KEY = os.getenv("AI_API_KEY")
 
-# ==============================
-# GROQ AI
-# ==============================
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-# ==============================
-# RSS SOURCES
-# ==============================
-
-rss_urls = [
-"https://news.google.com/rss/search?q=india+finance",
-"https://news.google.com/rss/search?q=stock+market+india",
-"https://news.google.com/rss/search?q=technology+news+india",
-"https://www.livemint.com/rss/markets",
-"https://www.livemint.com/rss/technology",
-"https://www.livemint.com/rss/news"
+RSS_FEEDS = [
+    "https://news.google.com/rss/search?q=india+stock+market",
+    "https://news.google.com/rss/search?q=technology+india",
 ]
 
-# ==============================
-# INTERNAL LINKS
-# ==============================
-
-internal_links = [
-"https://denewsland.in/category/finance-news/",
-"https://denewsland.in/category/market-news/",
-"https://denewsland.in/category/tech-news/",
-"https://denewsland.in/category/breaking-updates/",
-"https://denewsland.in/"
+INTERNAL_LINKS = [
+    "https://denewsland.in/category/finance-news/",
+    "https://denewsland.in/category/market-news/",
+    "https://denewsland.in/category/tech-news/",
 ]
 
-# ==============================
-# AI REWRITE
-# ==============================
-def ai_rewrite(text):
+# ---------- duplicate check ----------
+
+def is_duplicate(text):
+    h = hashlib.md5(text.encode()).hexdigest()
+
+    try:
+        with open("hash.txt") as f:
+            if h in f.read():
+                return True
+    except:
+        pass
+
+    with open("hash.txt","a") as f:
+        f.write(h+"\n")
+
+    return False
+
+
+# ---------- AI article generator ----------
+
+def generate_article(topic):
 
     prompt = f"""
-    इस news को simple human Hindi में rewrite करो।
-    Title strong होना चाहिए।
-		Human Language 
-		Title Discover Friendly 
-		3 external link 
-		4 internal link 
-    Article readable होना चाहिए।
+पूर्ण हिंदी लेख त्यार करो मानव भाषा वाला।
 
-    Topic:
-    {text}
-    """
+Topic: {topic}
 
-    url = "https://api.groq.com/openai/v1/chat/completions"
+600 शब्द का सरल हिंदी लेख लिखो।
+Title, Meta description और 3 headings बनाओ।
+"""
+
+    url = "https://api.openai.com/v1/chat/completions"
 
     headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Authorization": f"Bearer {AI_KEY}",
         "Content-Type": "application/json"
     }
 
     data = {
-        "model": "llama3-70b-8192",
-        "messages": [
-            {"role":"user","content":prompt}
-        ]
+        "model": "gpt-4o-mini",
+        "messages":[{"role":"user","content":prompt}]
     }
 
     r = requests.post(url,headers=headers,json=data)
 
-    try:
-        result = r.json()
-        return result["choices"][0]["message"]["content"]
+    result = r.json()
 
-    except:
-        print("AI Error:", r.text)
-        return text
+    return result["choices"][0]["message"]["content"]
 
-# ==============================
-# FEATURED IMAGE
-# ==============================
 
-def upload_image():
+# ---------- image generator ----------
 
-    img_url = "https://source.unsplash.com/featured/?news"
+def get_image():
+
+    img_url = "https://source.unsplash.com/1280x720/?finance,stock"
 
     img = requests.get(img_url).content
 
-    media_url = f"{site}/wp-json/wp/v2/media"
+    upload_url = f"{SITE}/wp-json/wp/v2/media"
 
     headers = {
         "Content-Disposition": "attachment; filename=news.jpg"
     }
 
     r = requests.post(
-        media_url,
+        upload_url,
         headers=headers,
         data=img,
-        auth=(username,app_password)
+        auth=(USERNAME,APP_PASSWORD)
     )
 
-    return r.json()["id"]
+    try:
+        return r.json()["id"]
+    except:
+        return 0
 
-# ==============================
-# POST PUBLISH
-# ==============================
 
-def publish_post(title,content,image_id):
+# ---------- publish post ----------
 
-    url = f"{site}/wp-json/wp/v2/posts"
+def publish(title,content,image_id):
+
+    url = f"{SITE}/wp-json/wp/v2/posts"
 
     data = {
         "title":title,
@@ -126,35 +114,30 @@ def publish_post(title,content,image_id):
 
     r = requests.post(
         url,
-        auth=(username,app_password),
-        json=data
+        json=data,
+        auth=(USERNAME,APP_PASSWORD)
     )
 
-    print(r.status_code)
+    print("POST:",r.status_code)
 
-# ==============================
-# MAIN ENGINE
-# ==============================
 
-for rss in rss_urls:
+# ---------- main engine ----------
 
-    feed = feedparser.parse(rss)
+for feed in RSS_FEEDS:
 
-    for post in feed.entries[:5]:
+    news = feedparser.parse(feed)
 
-        text = post.title + " " + post.summary
+    for item in news.entries[:5]:
 
-        article = ai_rewrite(text)
+        topic = item.title
+
+        if is_duplicate(topic):
+            continue
+
+        article = generate_article(topic)
 
         title = article.split("\n")[0]
 
-        image_id = upload_image()
+        image_id = get_image()
 
-        content = article
-
-        content += "\n\nExternal Source: " + post.link
-
-        for link in random.sample(internal_links,3):
-            content += "\n" + link
-
-        publish_post(title,content,image_id)
+        publish(title,article,image_id)
