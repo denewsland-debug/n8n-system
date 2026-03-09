@@ -44,15 +44,6 @@ def is_duplicate(text):
 
 def generate_article(topic):
 
-    prompt = f"""
-पूर्ण हिंदी लेख त्यार करो मानव भाषा वाला।
-
-Topic: {topic}
-
-600 शब्द का सरल हिंदी लेख लिखो।
-Title, Meta description और 3 headings बनाओ।
-"""
-
     url = "https://api.groq.com/openai/v1/chat/completions"
 
     headers = {
@@ -60,8 +51,23 @@ Title, Meta description और 3 headings बनाओ।
         "Content-Type": "application/json"
     }
 
+    prompt = f"""
+पूर्ण हिंदी लेख त्यार करो मानव भाषा वाला।
+
+Article tyar karo aur dhyan rahe article aur title kisi bhi pichle article se match na ho.
+
+Topic:
+{topic}
+
+Rules:
+Language simple Hindi
+Title Hindi + English mix
+Discover friendly
+Human readable
+"""
+
     data = {
-        "model": "llama3-70b-8192",
+        "model": "mixtral-8x7b-32768",
         "messages": [
             {"role": "user", "content": prompt}
         ]
@@ -69,20 +75,12 @@ Title, Meta description और 3 headings बनाओ।
 
     r = requests.post(url, headers=headers, json=data)
 
-    try:
+    result = r.json()
 
-        result = r.json()
-
-        if "choices" in result:
-            return result["choices"][0]["message"]["content"]
-
-        else:
-            print("AI API error:", result)
-            return topic
-
-    except Exception as e:
-
-        print("AI failure:", e)
+    if "choices" in result:
+        return result["choices"][0]["message"]["content"]
+    else:
+        print("AI error:", result)
         return topic
 
 
